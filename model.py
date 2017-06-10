@@ -3,10 +3,13 @@ import numpy as np
 import utils
 import ops
 
+np.random.seed(4321)
+tf.set_random_seed(1234)
+
 class DCGAN:
     def __init__(self, sess, n_epochs, learning_rate, beta1, train_size, batch_size, input_height, input_width, output_height,
                  output_width, dataset, input_fname_pattern, chckpoint_dir, sample_dir, train, test, crop, visualise,
-                 y_dim=1, g_filter_dim=64, g_fc_dim=1024, d_filter_dim=64, d_fc_dim=1024, c_dim=1):
+                 y_dim=10, g_filter_dim=64, g_fc_dim=1024, d_filter_dim=64, d_fc_dim=1024, c_dim=1):
         self.sess = sess
         self.crop = crop
 
@@ -46,35 +49,38 @@ class DCGAN:
                                      name='input_placeholder')
 
     def discriminator(self, image, Y, reuse=False):
+        image = tf.constant(np.random.normal(size=[100, 28, 28, 1]).astype(np.float32))
+        Y = np.random.normal(size=[100, 10]).astype(np.float32)
+
         with tf.variable_scope('discriminator') as scope:
             if reuse:
                 scope.reuse_variables()
 
-        Yb = tf.reshape(Y, [self.batch_size, 1, 1, self.c_dim])
+        Yb = tf.reshape(Y, [self.batch_size, 1, 1, self.y_dim])
         l0 = ops.concatenate_conditioning_vector_with_feature_map(image, Yb)
 
         w1 = tf.get_variable(name='filter_1',
-                             shape=[self.batch_size, 5, 5, self.c_dim + self.y_dim, self.c_dim + self.y_dim],
+                             shape=[5, 5, self.c_dim + self.y_dim, self.c_dim + self.y_dim],
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
         b1 = tf.get_variable(name='biases_filter1',
-                             shape=[self.c_dim + self.y_dim, self.c_dim + self.y_dim],
+                             shape=[1, self.c_dim + self.y_dim],
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
-        l1 = ops.conv2d(l0, w1, [1, 2, 2, 1], 'SAME')
+        l1 = ops.conv2d(l0, w1, [1, 1, 1, 1], 'SAME')
         l1 = tf.add(l1, b1)
         l1 = tf.nn.relu(l1)
         l1 = ops.concatenate_conditioning_vector_with_feature_map(l1, Yb)
 
         w2 = tf.get_variable(name='filter_2',
-                             shape=[self.batch_size, 5, 5, self.c_dim + 2*self.y_dim, self.d_filter_dim],
+                             shape=[5, 5, self.c_dim + 2*self.y_dim, self.d_filter_dim],
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
         b2 = tf.get_variable(name='biases_filter2',
-                             shape=[self.c_dim + 2*self.y_dim, self.d_filter_dim],
+                             shape=[1, self.d_filter_dim],
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
-        l2 = ops.conv2d(l1, w2, [1, 2, 2, 1], 'SAME')
+        l2 = ops.conv2d(l1, w2, [1, 1, 1, 1], 'SAME')
         l2 = tf.add(l2, b2)
         l2 = tf.nn.relu(l2)
         l2 = tf.reshape(l2, [self.batch_size, self.d_filter_dim * self.input_width * self.input_height])
@@ -85,7 +91,7 @@ class DCGAN:
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
         b3 = tf.get_variable(name='biases_fc1',
-                             shape=[self.d_fc_dim],
+                             shape=[1, self.d_fc_dim],
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
         l3 = tf.matmul(l2, w3)
@@ -94,7 +100,7 @@ class DCGAN:
         l3 = tf.concat([l3, Y], axis=1)
 
         w4 = tf.get_variable(name='fc2',
-                             shape=[self.d_fc_dim, 1],
+                             shape=[self.d_fc_dim + self.y_dim, 1],
                              dtype='float',
                              initializer=tf.truncated_normal_initializer())
         b4 = tf.get_variable(name='biases_fc2',
@@ -104,4 +110,20 @@ class DCGAN:
         l4 = tf.matmul(l3, w4)
         l4 = tf.add(l4, b4)
 
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+
+            f = sess.run(l4)
+
+            print(f)
+
         return l4, tf.nn.sigmoid(l4)
+
+
+
+gen1 = DCGAN(None, None, None, None, None, 100, 28, 28, 28,
+                 28, 'mnist', None, None, None, None, None, None, None,
+                 y_dim=10, g_filter_dim=5, g_fc_dim=10, d_filter_dim=5, d_fc_dim=5, c_dim=1)
+
+gen1.discriminator(None, None, False)
+
