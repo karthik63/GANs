@@ -15,7 +15,8 @@ class ArgumentParser:
         parser.add_argument('--output_height', help='The height of the output image', type=int, default=28)
         parser.add_argument('--output_width', help='The width of the output image', type=int, default=28)
         parser.add_argument('--dataset', help='The name of the dataset', type=str, default='mnist')
-        parser.add_argument('--input_fname_pattern', help='Glob pattern of filename of input images [*]', type=str, default='.jpg')
+        parser.add_argument('--input_fname_pattern', help='Glob pattern of filename of input images [*]',
+                            type=str, default='.jpg')
         parser.add_argument('--checkpoint_dir', help='Directory name to save checkpoints', type=str,
                             default='checkpoints')
         parser.add_argument('--sample_dir', help='directory name to save image samples', type=str, default='samples')
