@@ -31,6 +31,10 @@ class MNISTUtils:
 
         return vector_of_number
 
+    def get_label(self, index, label_path=None):
+        label_vector = self.Y_train_set_v[index]
+        return label_vector
+
     def get_image(self, index, image_path = None):
         image_vector = np.reshape(self.X_train_set[index], [28, 28, 1])
         return image_vector
