@@ -67,6 +67,8 @@ class DCGAN:
         self.g_vars = [var for var in t_vars if 'generator' in var.name]
         self.d_vars = [var for var in t_vars if 'discriminator' in var.name]
 
+        self.saver = tf.train.Saver()
+
     def train_model(self):
         mnist_utils = utils.MNISTUtils('mnist.pkl.gz')
         self.d_optimiser = tf.train.AdamOptimizer().minimize(self.d_loss, var_list=self.d_vars)
@@ -88,11 +90,13 @@ class DCGAN:
 
                 temp1, temp2, gen_image, _, _ = self.sess.run([self.d_loss, self.g_loss, self.G, self.d_optimiser, self.g_optimiser],
                                                    feed_dict={self.input_images: current_batch_X, self.y: current_batch_Y, self.z: current_batch_Z})
-                #toimage(np.reshape(gen_image[2], [28, 28])).show()
+                toimage(np.reshape(gen_image[3], [28, 28])).save('./generated_images/' + 'e' + str(epoch) + 'b' + str(i) + '.png')
                 epoch_loss_d += temp1
                 epoch_loss_g += temp2
             print('epoch no : ' + str(epoch) + ' discriminator loss is : ' + str(epoch_loss_d/50000) + ' generator loss is : ' + str(epoch_loss_g/50000))
-            toimage(np.reshape(gen_image[2], [28, 28])).show()
+            toimage(np.reshape(gen_image[2], [28, 28])).save('./epoch_images/' + 'epoch' + str(epoch) + '.png')
+
+        self.saver.save(self.sess, './weights1')
 
     def discriminator(self, image, Y, reuse=False):
 
@@ -111,7 +115,7 @@ class DCGAN:
                                  shape=[1, self.c_dim + self.y_dim],
                                  dtype='float',
                                  initializer=tf.truncated_normal_initializer())
-            l1 = ops.conv2d(l0, w1, [1, 1, 1, 1], 'SAME')
+            l1 = ops.conv2d(l0, w1, [1, 2, 2, 1], 'SAME')
             l1 = tf.add(l1, b1)
             l1 = tf.nn.relu(l1)
             l1 = ops.concatenate_conditioning_vector_with_feature_map(l1, Yb)
@@ -124,14 +128,14 @@ class DCGAN:
                                  shape=[1, self.d_filter_dim],
                                  dtype='float',
                                  initializer=tf.truncated_normal_initializer())
-            l2 = ops.conv2d(l1, w2, [1, 1, 1, 1], 'SAME')
+            l2 = ops.conv2d(l1, w2, [1, 2, 2, 1], 'SAME')
             l2 = tf.add(l2, b2)
             l2 = tf.nn.relu(l2)
-            l2 = tf.reshape(l2, [self.batch_size, self.d_filter_dim * self.input_width * self.input_height])
+            l2 = tf.reshape(l2, [self.batch_size, -1])
             l2 = tf.concat([l2, Y], axis=1)
 
             w3 = tf.get_variable(name='fc_1',
-                                 shape=[self.d_filter_dim * self.input_width * self.input_height + self.y_dim, self.d_fc_dim],
+                                 shape=[l2.get_shape()[1], self.d_fc_dim],
                                  dtype='float',
                                  initializer=tf.truncated_normal_initializer())
             b3 = tf.get_variable(name='biases_fc1',
@@ -156,7 +160,7 @@ class DCGAN:
 
         return l4, tf.nn.sigmoid(l4)
 
-    def generator(self, z, Y):
+    def generator(self, z, Y, reuse=False):
 
         with tf.variable_scope('generator'):
 
@@ -220,13 +224,23 @@ class DCGAN:
 
             return tf.nn.sigmoid(l4)
 
+    def generate_image(self, z, Y):
+        self.build_model()
+
+        self.saver.restore(self.sess, './weights1')
+
+        generated_image = self.sess.run(self.G, feed_dict={self.z: np.random.uniform(-1, 1, [self.batch_size, 100]),
+                                                           self.y: np.array([0, 0, 0, 1, 0, 0, 0, 0, 0, 0])})
+
+        toimage(np.reshape(generated_image, [28, 28])).save('./predicted_images/' + 'img1' + '.png')
+
 with tf.Session() as sess:
 
-    gen1 = DCGAN(sess, 10, None, None, None, 100, 28, 28, 28,
+    gen1 = DCGAN(sess, 100, None, None, None, 100, 28, 28, 28,
                      28, 'mnist', None, None, None, None, None, None, None,
                      y_dim=10, z_dim=100, g_filter_dim=5, g_fc_dim=10, d_filter_dim=5, d_fc_dim=5, c_dim=1,input_size=50000)
 
     #gen1.discriminator(None, None, False)
     gen1.train_model()
 
-
+    gen1.generate_image(np.random.uniform(-1, 1, [100, 100]), np.array([0, 0, 0, 1, 0, 0, 0, 0, 0, 0]))
