@@ -222,7 +222,6 @@ class DCGAN:
 
 with tf.Session() as sess:
 
-
     gen1 = DCGAN(sess, 10, None, None, None, 100, 28, 28, 28,
                      28, 'mnist', None, None, None, None, None, None, None,
                      y_dim=10, z_dim=100, g_filter_dim=5, g_fc_dim=10, d_filter_dim=5, d_fc_dim=5, c_dim=1,input_size=50000)
