@@ -15,4 +15,16 @@ def concatenate_conditioning_vector_with_feature_map(x, y):
 def lrelu(x, leak=0.2):
     return tf.maximum(x*leak, x)
 
+class batch_norm():
+    def __init__(self, epsilon=1e-5, momentum=0.9, name='batch_norm'):
+        with tf.variable_scope(name):
+            self.epsilon = epsilon
+            self.momentum = momentum
+            self.name = name
 
+    def bn(self, x, train=True):
+        return tf.layers.batch_normalization(x,
+                                             epsilon=self.epsilon,
+                                             momentum=self.momentum,
+                                             scale=True,
+                                             training=train)

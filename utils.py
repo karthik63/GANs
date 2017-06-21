@@ -1,4 +1,4 @@
-import scipy
+import scipy.misc
 import numpy as np
 import pickle
 import gzip
