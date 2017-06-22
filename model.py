@@ -77,7 +77,12 @@ class DCGAN:
         self.saver = tf.train.Saver()
 
     def train_model(self):
-        mnist_utils = utils.MNISTUtils('mnist.pkl.gz')
+
+        if self.dataset == 'mnist':
+            mnist_utils = utils.MNISTUtils('mnist.pkl.gz')
+        elif self.dataset == 'fashion':
+            mnist_utils = utils.FashionUtils('/home/sam/Desktop/fashion_clothing_and_category')
+
         self.d_optimiser = tf.train.AdamOptimizer(learning_rate=0.0002).minimize(self.d_loss, var_list=self.d_vars)
         self.g_optimiser = tf.train.AdamOptimizer(learning_rate=0.0002).minimize(self.g_loss, var_list=self.g_vars)
 
@@ -105,14 +110,15 @@ class DCGAN:
                 _ = self.sess.run(self.g_optimiser, feed_dict={self.input_images: current_batch_X, self.y: current_batch_Y, self.z: current_batch_Z})
                 gen_image = self.sess.run(self.G, feed_dict={self.y: current_batch_Y, self.z: current_batch_Z})
 
-                toimage(np.reshape(gen_image[3], [28, 28])).save('./generated_images/' + 'e' + str(epoch) + 'b' + str(i) + '.png')
+                toimage(gen_image[3]).save('./generated_images/' + 'e' + str(epoch) + 'b' + str(i) + '.png')
                 epoch_loss_d += temp1
                 epoch_loss_g += temp2
+
             print('epoch no : ' + str(epoch) + ' discriminator loss is : ' + str(epoch_loss_d/50000) +
                   ' generator loss is : ' + str(epoch_loss_g/50000) + ' no ' +
                   str(mnist_utils.get_label(image_index + 2, 'mnist.pkl.gz')))
 
-            toimage(np.reshape(gen_image[2], [28, 28])).save('./epoch_images/' + 'epoch' + str(epoch) + '.png')
+            toimage(gen_image[2]).save('./epoch_images/' + 'epoch' + str(epoch) + '.png')
 
         self.saver.save(self.sess, './weights1/single_epoch')
 
@@ -252,9 +258,9 @@ class DCGAN:
 
 with tf.Session() as sess:
 
-    gen1 = DCGAN(sess, 25, None, None, None, 100, 28, 28, 28,
-                     28, 'mnist', None, None, None, None, None, None, None,
-                     y_dim=10, z_dim=10, g_filter_dim=64, g_fc_dim=1024, d_filter_dim=64, d_fc_dim=1024, c_dim=1, input_size=50000)
+    gen1 = DCGAN(sess, 1, None, None, None, 64, 301, 301, 301,
+                     301, 'fashion', None, None, None, None, None, None, None,
+                     y_dim=10, z_dim=10, g_filter_dim=64, g_fc_dim=1024, d_filter_dim=64, d_fc_dim=1024, c_dim=3, input_size=500)
 
     #gen1.discriminator(None, None, False)
     gen1.train_model()
