@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 def deconv2d(value, filter, output_shape, strides):
-    return tf.nn.conv2d_transpose(value, filter, output_shape, strides)
+    return tf.nn.conv2d_transpose(value, filter, output_shape, strides, padding='SAME')
 
 def conv2d(a, b, c, d):
     return tf.nn.conv2d(a, b, c, d)

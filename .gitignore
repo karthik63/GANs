@@ -1,2 +1,9 @@
+mnist.pkl.gz
+predicted_images
+graphs
+generated_images
+epoch_images
+fashion_clothing_and_category
+data
 .idea
 __pycache__

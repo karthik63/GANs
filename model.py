@@ -1,6 +1,8 @@
 import tensorflow as tf
 import numpy as np
 import utils
+from argument_parser import ArgumentParser
+from config import Config
 import ops
 from math import ceil
 from scipy.misc import toimage
@@ -8,20 +10,20 @@ from scipy.misc import toimage
 np.random.seed(4321)
 tf.set_random_seed(1234)
 class DCGAN:
-    def __init__(self, sess, n_epochs, learning_rate, beta1, train_size, batch_size, input_height, input_width, output_height,
-                 output_width, dataset, input_fname_pattern, chckpoint_dir, sample_dir, train, test, crop, visualise,
-                 y_dim=10, z_dim=100, g_filter_dim=64, g_fc_dim=1024, d_filter_dim=64, d_fc_dim=1024, c_dim=1, input_size=50000):
+    def __init__(self, config, sess, y_dim=10, z_dim=100, g_filter_dim=64, g_fc_dim=1024,
+                 d_filter_dim=64, d_fc_dim=1024, c_dim=1, input_size=50000):
         self.sess = sess
-        self.crop = crop
+        self.config = config
+        self.crop = config.crop
 
-        self.batch_size = batch_size
+        self.batch_size = config.batch_size
 
         self.input_size = input_size
 
-        self.input_height = input_height
-        self.input_width = input_width
-        self.output_height = output_height
-        self.output_width = output_width
+        self.input_height = config.input_height
+        self.input_width = config.input_width
+        self.output_height = config.output_height
+        self.output_width = config.output_width
 
         self.c_dim = c_dim
         self.y_dim = y_dim
@@ -31,19 +33,18 @@ class DCGAN:
         self.d_filter_dim = d_filter_dim
         self.d_fc_dim = d_fc_dim
 
-        self.n_epochs = n_epochs
-        self.learning_rate = learning_rate
-        self.beta1 = beta1
-        self.train_size = train_size
+        self.n_epochs = config.n_epochs
+        self.learning_rate = config.learning_rate
+        self.beta1 = config.beta1
+        self.train_size = config.train_size
 
-        self.dataset = dataset
-        self.input_fname_pattern = input_fname_pattern
-        self.chckpoint_dir = chckpoint_dir
-        self.sample_dir = sample_dir
+        self.dataset = config.dataset
+        self.input_fname_pattern = config.input_fname_pattern
+        self.checkpoint_dir = config.checkpoint_dir
+        self.sample_dir = config.sample_dir
 
-        self.train = train
-        self.test = test
-        self.visualise = visualise
+        self.train = config.train
+        self.visualise = config.visualise
         #haven't done batch normalisation
 
         self.d_bn1 = ops.batch_norm(name='d_bn1')
@@ -53,11 +54,13 @@ class DCGAN:
         self.g_bn1 = ops.batch_norm(name='g_bn1')
         self.g_bn2 = ops.batch_norm(name='g_bn2')
 
+        self.resize = config.resize
+
         self.build_model()
 
     def build_model(self):
-        self.y = tf.placeholder('float', [self.batch_size, self.y_dim], name='y')
-        self.z = tf.placeholder('float', [self.batch_size, self.z_dim], name='z')
+        self.y = tf.placeholder('float', [None, self.y_dim], name='y')
+        self.z = tf.placeholder('float', [None, self.z_dim], name='z')
         self.input_images = tf.placeholder('float', [self.batch_size, self.input_height, self.input_width, self.c_dim])
 
         self.D = self.discriminator(self.input_images, self.y)
@@ -79,9 +82,9 @@ class DCGAN:
     def train_model(self):
 
         if self.dataset == 'mnist':
-            mnist_utils = utils.MNISTUtils('mnist.pkl.gz')
+            mnist_utils = utils.MNISTUtils('mnist.pkl.gz', self.config)
         elif self.dataset == 'fashion':
-            mnist_utils = utils.FashionUtils('/home/sam/Desktop/fashion_clothing_and_category')
+            mnist_utils = utils.FashionUtils('./fashion_clothing_and_category', self.config)
 
         self.d_optimiser = tf.train.AdamOptimizer(learning_rate=0.0002).minimize(self.d_loss, var_list=self.d_vars)
         self.g_optimiser = tf.train.AdamOptimizer(learning_rate=0.0002).minimize(self.g_loss, var_list=self.g_vars)
@@ -114,9 +117,11 @@ class DCGAN:
                 epoch_loss_d += temp1
                 epoch_loss_g += temp2
 
-            print('epoch no : ' + str(epoch) + ' discriminator loss is : ' + str(epoch_loss_d/50000) +
-                  ' generator loss is : ' + str(epoch_loss_g/50000) + ' no ' +
-                  str(mnist_utils.get_label(image_index + 2, 'mnist.pkl.gz')))
+                print('epoch: ' + str(epoch) + ' batch: ' + str(i) + ' disc loss :' + str(temp1/current_batch_size) + ' gen loss :' + str(temp2/current_batch_size))
+
+            print('epoch no : ' + str(epoch) + ' discriminator loss is : ' + str(epoch_loss_d/self.input_size) +
+                  ' generator loss is : ' + str(epoch_loss_g/self.input_size) + ' no ' +
+                  str(mnist_utils.get_label(image_index + 2)))
 
             toimage(gen_image[2]).save('./epoch_images/' + 'epoch' + str(epoch) + '.png')
 
@@ -189,8 +194,8 @@ class DCGAN:
         with tf.variable_scope('generator'):
 
             s_h, s_w = self.output_height, self.output_width
-            s_h2, s_w2 = int(self.output_height/2), int(self.output_width/2)
-            s_h4, s_w4 = int(self.output_height/4), int(self.output_width/4)
+            s_h2, s_w2 = int(ceil(float(s_h) / 2)), int(ceil(float(s_w) / 2))
+            s_h4, s_w4 = int(ceil(float(s_h2) / 2)), int(ceil(float(s_w2) / 2))
 
             Yb = tf.reshape(Y, [self.batch_size, 1, 1, self.y_dim])
             l0 = tf.concat([z, Y], axis=1)
@@ -224,20 +229,20 @@ class DCGAN:
 
             w3 = tf.get_variable(name='g_weights_filter1',
                                  dtype='float',
-                                 shape=[5, 5, self.g_filter_dim, self.g_filter_dim*2+self.y_dim],
+                                 shape=[5, 5, self.g_filter_dim*2, self.g_filter_dim*2+self.y_dim],
                                  initializer=tf.truncated_normal_initializer(stddev=0.02))
             b3 = tf.get_variable(name='g_biases_filter1',
                                  dtype='float',
-                                 shape=[1, self.g_filter_dim],
+                                 shape=[1, self.g_filter_dim*2],
                                  initializer=tf.constant_initializer(0.0))
-            l3 = ops.deconv2d(l2, w3, [self.batch_size, s_h2, s_w2, self.g_filter_dim], [1, 2, 2, 1])
+            l3 = ops.deconv2d(l2, w3, [self.batch_size, s_h2, s_w2, self.g_filter_dim * 2], [1, 2, 2, 1])
             l3 = self.g_bn2.bn(tf.add(l3, b3))
             l3 = tf.nn.relu(l3)
             l3 = ops.concatenate_conditioning_vector_with_feature_map(l3, Yb)
 
             w4 = tf.get_variable(name='g_weights_filter2',
                                  dtype='float',
-                                 shape=[5, 5, self.c_dim, self.g_filter_dim + self.y_dim],
+                                 shape=[5, 5, self.c_dim, self.g_filter_dim*2 + self.y_dim],
                                  initializer=tf.truncated_normal_initializer(stddev=0.02))
             b4 = tf.get_variable(name='g_biases_filter2',
                                  dtype='float',
@@ -250,17 +255,24 @@ class DCGAN:
 
     def generate_image(self, z, Y):
         self.saver.restore(self.sess, './weights1/single_epoch')
-
+        temp_y = np.zeros([50]).astype('int')
+        temp_y[6] = 1
         generated_image = self.sess.run(self.G, feed_dict={self.z: np.random.uniform(-1, 1, [1, self.z_dim]),
-                                                           self.y: np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])})
+                                                           self.y: temp_y})
 
         toimage(np.reshape(generated_image, [28, 28])).save('./predicted_images/' + 'img1' + '.png')
 
-with tf.Session() as sess:
 
-    gen1 = DCGAN(sess, 1, None, None, None, 64, 301, 301, 301,
-                     301, 'fashion', None, None, None, None, None, None, None,
-                     y_dim=10, z_dim=10, g_filter_dim=64, g_fc_dim=1024, d_filter_dim=64, d_fc_dim=1024, c_dim=3, input_size=500)
+config = tf.ConfigProto(allow_soft_placement=True)
+config.gpu_options.allow_growth = True
+with tf.Session(config=config) as sess:
+
+    args = ArgumentParser().args
+
+    config = Config(args)
+
+    gen1 = DCGAN(config, sess, y_dim=50, z_dim=100, g_filter_dim=64, g_fc_dim=1024,
+                 d_filter_dim=64, d_fc_dim=1024, c_dim=3, input_size=64000)
 
     #gen1.discriminator(None, None, False)
     gen1.train_model()
