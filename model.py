@@ -272,7 +272,7 @@ with tf.Session(config=config) as sess:
     config = Config(args)
 
     gen1 = DCGAN(config, sess, y_dim=50, z_dim=100, g_filter_dim=64, g_fc_dim=1024,
-                 d_filter_dim=64, d_fc_dim=1024, c_dim=3, input_size=64000)
+                 d_filter_dim=64, d_fc_dim=1024, c_dim=3, input_size=289216)
 
     #gen1.discriminator(None, None, False)
     gen1.train_model()
