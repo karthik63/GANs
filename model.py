@@ -262,9 +262,10 @@ class DCGAN:
 
         toimage(np.reshape(generated_image, [28, 28])).save('./predicted_images/' + 'img1' + '.png')
 
-
-config = tf.ConfigProto(allow_soft_placement=True)
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
 config.gpu_options.allow_growth = True
+config.gpu_options.allocator_type = 'BFC'
 with tf.Session(config=config) as sess:
 
     args = ArgumentParser().args
@@ -272,7 +273,7 @@ with tf.Session(config=config) as sess:
     config = Config(args)
 
     gen1 = DCGAN(config, sess, y_dim=50, z_dim=100, g_filter_dim=64, g_fc_dim=1024,
-                 d_filter_dim=64, d_fc_dim=1024, c_dim=3, input_size=289216)
+                 d_filter_dim=64, d_fc_dim=1024, c_dim=1, input_size=50000)
 
     #gen1.discriminator(None, None, False)
     gen1.train_model()

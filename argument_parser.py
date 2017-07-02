@@ -9,12 +9,12 @@ class ArgumentParser:
         parser.add_argument('--learning_rate', help='Learning rate for adam optimiser', type=float, default=0.0002)
         parser.add_argument('--beta1', help='momentum term of adam' , type=float, default=0.5)
         parser.add_argument('--train_size', help='The size of train images', type=float, default=np.inf)
-        parser.add_argument('--batch_size', help='The batch size of the images', type=int, default=64)
-        parser.add_argument('--input_height', help='The height of the input image', type=int, default=300)
-        parser.add_argument('--input_width', help='The width of the input image', type=int, default=200)
-        parser.add_argument('--output_height', help='The height of the output image', type=int, default=300)
-        parser.add_argument('--output_width', help='The width of the output image', type=int, default=200)
-        parser.add_argument('--dataset', help='The name of the dataset', type=str, default='fashion')
+        parser.add_argument('--batch_size', help='The batch size of the images', type=int, default=1)
+        parser.add_argument('--input_height', help='The height of the input image', type=int, default=28)
+        parser.add_argument('--input_width', help='The width of the input image', type=int, default=28)
+        parser.add_argument('--output_height', help='The height of the output image', type=int, default=28)
+        parser.add_argument('--output_width', help='The width of the output image', type=int, default=28)
+        parser.add_argument('--dataset', help='The name of the dataset', type=str, default='mnist')
         parser.add_argument('--input_fname_pattern', help='Glob pattern of filename of input images [*]',
                             type=str, default='.jpg')
         parser.add_argument('--checkpoint_dir', help='Directory name to save checkpoints', type=str,
